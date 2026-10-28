@@ -123,7 +123,7 @@ def optimize_local_gaussian(
     vae_elbo = torch.mean(elbo)
     iwae_elbo = torch.mean(log_mean_exp(elbo.view(k, -1).transpose(0, 1)))
 
-    return vae_elbo.data[0], iwae_elbo.data[0]
+    return vae_elbo.item(), iwae_elbo.item()
 
 
 def main():

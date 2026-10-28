@@ -4,12 +4,37 @@ Code regarding evaluation for paper
 [[arxiv](https://arxiv.org/abs/1801.03558)]
 
 ## Dependencies
-* `python3`
-* `pytorch==0.2.0`
-* `tqdm`
+* `python3` (3.10–3.12 recommended)
+* `pytorch>=2.0` and `torchvision`
+* `numpy`, `scipy`, `tqdm`
+* `visdom` (optional, only for `--visdom`)
+
+The code was originally written for `pytorch==0.2.0` and has been updated to run on current PyTorch,
+on both CPU and GPU.
+
+### Local setup
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+# CPU-only PyTorch; for a CUDA build see https://pytorch.org
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt
+```
+
+### Running on Kaggle
+Open [`kaggle/inference_suboptimality.ipynb`](kaggle/inference_suboptimality.ipynb) on Kaggle
+(**Create → New Notebook → File → Import Notebook**), set **Accelerator** to `GPU T4` and
+turn **Internet** on, then run the cells. The notebook clones this repository, trains a model,
+runs every evaluation, and packages checkpoints and logs as the notebook's output.
+For long runs use **Save Version → Save & Run All**.
+
+To run your own changes: commit, `git push`, then rerun the notebook's first cell (it pulls).
 
 ## Training
-To train on MNIST and Fashion, unzip the compressed files in folder `datasets/`.
+MNIST is extracted from `datasets/mnist.pkl.tar.gz` automatically on first use; Fashion is read
+directly from the `.gz` files in `datasets/fashion/`.
+
+For a quick check that everything works, train for a couple of epochs first:
+`python run.py --train --dataset mnist --epochs 2 --display-epoch 1`
 
 `python run.py --train --dataset <dataset> (--lr-schedule --warmup --early-stopping)`
 

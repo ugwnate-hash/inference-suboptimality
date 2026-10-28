@@ -22,9 +22,9 @@ def log_normal(x, mean=None, logvar=None):
         output: [B]
     """
     if mean is None:
-        mean = Variable(torch.zeros(x.size()).type(type(x.data)))
+        mean = torch.zeros_like(x)
     if logvar is None:
-        logvar = Variable(torch.zeros(x.size()).type(type(x.data)))
+        logvar = torch.zeros_like(x)
 
     return -0.5 * (logvar.sum(1) + ((x - mean).pow(2) / torch.exp(logvar)).sum(1))
 

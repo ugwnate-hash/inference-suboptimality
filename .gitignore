@@ -99,3 +99,11 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# Project outputs
+checkpoints/
+logs/
+*.pth
+datasets/mnist.pkl
+datasets/cifar-10-batches-py/
+datasets/cifar-10-python.tar.gz

@@ -78,8 +78,8 @@ def ais_trajectory(
         epsilon = Variable(torch.ones(B).type(model.dtype)).mul_(0.01)
         # accept/reject history for tuning step size
         accept_hist = Variable(torch.zeros(B).type(model.dtype))
-        # record log importance weight; volatile=True reduces memory greatly
-        logw = Variable(torch.zeros(B).type(mdtype), volatile=True)
+        # record log importance weight; kept out of the autograd graph to save memory
+        logw = torch.zeros(B).type(mdtype)
 
         # initial sample of z
         if mode == 'forward':
@@ -89,9 +89,10 @@ def ais_trajectory(
 
         for j, (t0, t1) in tqdm(enumerate(zip(schedule[:-1], schedule[1:]), 1)):
             # update log importance weight
-            log_int_1 = log_f_i(current_z, batch, t0)
-            log_int_2 = log_f_i(current_z, batch, t1)
-            logw.add_(log_int_2 - log_int_1)
+            with torch.no_grad():
+                log_int_1 = log_f_i(current_z, batch, t0)
+                log_int_2 = log_f_i(current_z, batch, t1)
+                logw.add_(log_int_2 - log_int_1)
 
             # resample speed
             current_v = Variable(torch.randn(current_z.size()).type(mdtype))

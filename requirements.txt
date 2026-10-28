@@ -1,0 +1,9 @@
+# PyTorch is preinstalled on Kaggle. Locally, install it first from https://pytorch.org
+# (CPU-only: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu)
+torch
+torchvision
+numpy
+scipy
+tqdm
+# optional, only for `run.py --visdom`
+# visdom

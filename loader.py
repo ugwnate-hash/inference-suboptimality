@@ -76,6 +76,11 @@ class CIFAR10:
 class Larochelle_MNIST:
 
     def __init__(self, part='train', batch_size=128, partial=1000):
+        if not os.path.exists('datasets/mnist.pkl'):
+            # the repo ships the pickle compressed; extract it on first use
+            import tarfile
+            with tarfile.open('datasets/mnist.pkl.tar.gz') as tar:
+                tar.extract('mnist.pkl', path='datasets')
         with open('datasets/mnist.pkl', 'rb') as f:
             if sys.version_info[0] < 3:
                 mnist = pickle.load(f)

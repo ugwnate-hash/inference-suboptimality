@@ -17,6 +17,7 @@ from torch.autograd import Variable
 
 from utils.math_ops import log_bernoulli, log_normal, log_mean_exp, safe_repeat
 from utils.hparams import HParams
+from utils.helper import get_model, get_loaders
 
 from loader import get_Larochelle_MNIST_loader, get_fashion_loader, get_cifar10_loader
 from vae import VAE
@@ -236,7 +237,7 @@ def optimize_local_expressive(
     vae_elbo = torch.mean(elbo)
     iwae_elbo = torch.mean(log_mean_exp(elbo.view(k, -1).transpose(0, 1)))
 
-    return vae_elbo.data[0], iwae_elbo.data[0]
+    return vae_elbo.item(), iwae_elbo.item()
 
 
 def main():

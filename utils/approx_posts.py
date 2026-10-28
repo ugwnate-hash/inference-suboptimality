@@ -60,7 +60,7 @@ class Flow(nn.Module):
         out = qv_weights[-1](out)
         mean_v0, logvar_v0 = out[:, :z_size], out[:, z_size:]
 
-        eps = Variable(torch.randn(B, z_size).type( type(out.data) ))
+        eps = torch.randn(B, z_size).type_as(out)
         v0 = eps.mul(logvar_v0.mul(0.5).exp_()) + mean_v0
         logqv0 = log_normal(v0, mean_v0, logvar_v0)
 

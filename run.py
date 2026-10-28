@@ -9,14 +9,11 @@ import argparse
 from tqdm import tqdm
 import numpy as np
 np.set_printoptions(threshold=sys.maxsize)
-import matplotlib.pyplot as plt
 
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
-from torchvision import datasets, transforms
-import visdom
 
 from utils.hparams import HParams
 from utils.ais import ais_trajectory
@@ -78,6 +75,12 @@ parser.add_argument('--warmup', '-w', action='store_true',
 
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
+
+
+def eval_grad_mode(model):
+    # Hamiltonian flow differentiates through the energy even at eval time;
+    # every other model can skip building the graph, which saves a lot of memory
+    return torch.set_grad_enabled(model.hamiltonian_flow)
 
 
 def get_default_hparams():
@@ -183,26 +186,27 @@ def train(
             train_logpz, test_logpz = [], []
             train_logqz, test_logqz = [], []
             train_stats, test_stats = [], []
-            for _, (batch, _) in enumerate(train_loader):
-                batch = Variable(batch)
-                if args.cuda:
-                    batch = batch.cuda()
-                elbo, logpx, logpz, logqz = model(batch, k=1)
-                train_stats.append(elbo.data[0])
-                train_logpx.append(logpx.data[0])
-                train_logpz.append(logpz.data[0])
-                train_logqz.append(logqz.data[0])
+            with eval_grad_mode(model):
+                for _, (batch, _) in enumerate(train_loader):
+                    batch = Variable(batch)
+                    if args.cuda:
+                        batch = batch.cuda()
+                    elbo, logpx, logpz, logqz = model(batch, k=1)
+                    train_stats.append(elbo.item())
+                    train_logpx.append(logpx.item())
+                    train_logpz.append(logpz.item())
+                    train_logqz.append(logqz.item())
 
-            for _, (batch, _) in enumerate(test_loader):
-                batch = Variable(batch)
-                if args.cuda:
-                    batch = batch.cuda()
-                # early stopping with iwae bound
-                elbo, logpx, logpz, logqz = model(batch, k=k_eval)
-                test_stats.append(elbo.data[0])
-                test_logpx.append(logpx.data[0])
-                test_logpz.append(logpz.data[0])
-                test_logqz.append(logqz.data[0])
+                for _, (batch, _) in enumerate(test_loader):
+                    batch = Variable(batch)
+                    if args.cuda:
+                        batch = batch.cuda()
+                    # early stopping with iwae bound
+                    elbo, logpx, logpz, logqz = model(batch, k=k_eval)
+                    test_stats.append(elbo.item())
+                    test_logpx.append(logpx.item())
+                    test_logpz.append(logpz.item())
+                    test_logqz.append(logqz.item())
             print (
                 'Train Epoch: [{}/{}]'.format(epoch, epochs),
                 'Train set ELBO {:.4f}'.format(np.mean(train_stats)),
@@ -244,12 +248,13 @@ def test_iwae(
     model.eval()
     time_ = time.time()
     elbos = []
-    for i, (batch, _) in enumerate(loader):
-        batch = Variable(batch)
-        if args.cuda:
-            batch = batch.cuda()
-        elbo, logpx, logpz, logqz = model(batch, k=k)
-        elbos.append(elbo.data[0])
+    with eval_grad_mode(model):
+        for i, (batch, _) in enumerate(loader):
+            batch = Variable(batch)
+            if args.cuda:
+                batch = batch.cuda()
+            elbo, logpx, logpz, logqz = model(batch, k=k)
+            elbos.append(elbo.item())
 
     mean_ = np.mean(elbos)
     if print_res:
@@ -287,11 +292,12 @@ def run():
         )
 
     if args.visdom:
-        vis = visdom.Visdom(env=args.save, port=args.port)
+        import visdom  # optional dependency, only needed for this flag
+        vis = visdom.Visdom(env=args.save_visdom, port=args.port)
         model.load_state_dict(torch.load(args.eval_path)['state_dict'])
 
         # plot original images
-        batch, _ = train_loader.next()
+        batch, _ = next(iter(train_loader))
         images = list(batch.numpy())
         win_samples = vis.images(images, 10, 2, opts={'caption': 'original images'}, win=None)
 
@@ -305,10 +311,8 @@ def run():
         # VAE bounds computed w/ 100 MC samples to reduce variance
         train_res, test_res = [], []
         for _ in range(100):
-            test_iwae(model, train_loader, k=1, f=args.eval_path)
-            test_iwae(model, test_loader, k=1, f=args.eval_path)
-            train_res.append(train_res)
-            test_res.append(test_res)
+            train_res.append(test_iwae(model, train_loader, k=1, f=args.eval_path))
+            test_res.append(test_iwae(model, test_loader, k=1, f=args.eval_path))
 
         print ('Training set VAE ELBO w/ 100 MC samples: %.4f' % np.mean(train_res))
         print ('Test set VAE ELBO w/ 100 MC samples: %.4f' % np.mean(test_res))
@@ -321,10 +325,12 @@ def run():
         model.load_state_dict(torch.load(args.eval_path)['state_dict'])
         schedule_fn = linear_schedule if args.ais_schedule == 'linear' else sigmoidial_schedule
         schedule = schedule_fn(args.n_ais_dist)
-        ais_trajectory(
+        logws = ais_trajectory(
             model, train_loader,
             mode='forward', schedule=schedule, n_sample=args.n_ais_iwae
         )
+        print ('AIS lower bound on log p(x), averaged over batches: %.4f' % \
+            np.mean([logw.mean().item() for logw in logws]))
 
 
 if __name__ == '__main__':

@@ -59,7 +59,7 @@ def accept_reject(current_z, current_v,
         K: function to compute kinetic energy (default: kinetic energy in physics w/ mass=1)
     """
 
-    mdtype = type(current_z.data)
+    mdtype = current_z.type()
 
     current_Hamil = K(current_v) + U(current_z)
     propose_Hamil = K(v) + U(z)

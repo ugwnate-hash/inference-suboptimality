@@ -14,9 +14,9 @@ model:
   n_flows: 2
 
 train:
-  epochs: 3280
+  epochs: 500
   batch_size: 100
-  display_epoch: 10        # evaluate + save a checkpoint every N epochs
+  display_epoch: 20        # evaluate + save a checkpoint every N epochs
   lr_schedule: true        # IWAE learning-rate decay
   warmup: true             # anneal the KL term in over the first epochs
   early_stopping: true

@@ -7,7 +7,7 @@
 dataset: mnist             # mnist | fashion | cifar
 
 model:
-  z_size: 50
+  z_size: 2
   wide_encoder: false      # more hidden units / channels in the encoder
   has_flow: false          # normalizing flow on top of the Gaussian encoder
   hamiltonian_flow: false  # Hamiltonian flow (run.py and bdmc.py only)

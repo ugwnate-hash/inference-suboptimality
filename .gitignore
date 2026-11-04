@@ -103,6 +103,7 @@ ENV/
 # Project outputs
 checkpoints/
 logs/
+plots/
 *.pth
 datasets/mnist.pkl
 datasets/cifar-10-batches-py/

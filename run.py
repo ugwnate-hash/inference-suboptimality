@@ -16,6 +16,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 from utils.hparams import HParams
+from utils.config import parse_args
 from utils.ais import ais_trajectory
 from utils.math_ops import sigmoidial_schedule, linear_schedule
 from utils.helper import get_model, get_loaders
@@ -73,7 +74,7 @@ parser.add_argument('--n-flows', '-nf', type=int, default=2, help='number of flo
 parser.add_argument('--warmup', '-w', action='store_true',
                     help='apply warmup during training')
 
-args = parser.parse_args()
+args = parse_args(parser)
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
 
@@ -271,12 +272,14 @@ def run():
     model = get_model(args.dataset, get_default_hparams())
 
     if args.train:
-        save_path = 'checkpoints/%s/%s/%s%s/' % (
+        save_path = 'checkpoints/%s/%s/%s%s%s/' % (
                         args.dataset,
                         'warmup' if args.warmup else 'no_warmup',
                         'wide_' if args.wide_encoder else '',
-                        'hamiltonian_flow' if args.hamiltonian_flow else 
-                            'flow' if args.has_flow else 'ffg'
+                        'hamiltonian_flow' if args.hamiltonian_flow else
+                            'flow' if args.has_flow else 'ffg',
+                        # non-default latent sizes get their own folder
+                        '' if args.z_size == 50 else '_z%d' % args.z_size
                     )
         if not os.path.exists(save_path):
             os.makedirs(save_path)

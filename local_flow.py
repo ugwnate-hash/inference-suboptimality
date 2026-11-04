@@ -17,6 +17,7 @@ from torch.autograd import Variable
 
 from utils.math_ops import log_bernoulli, log_normal, log_mean_exp, safe_repeat
 from utils.hparams import HParams
+from utils.config import parse_args
 from utils.helper import get_model, get_loaders
 
 from loader import get_Larochelle_MNIST_loader, get_fashion_loader, get_cifar10_loader
@@ -42,7 +43,7 @@ parser.add_argument('--n-flows', '-nf', type=int, default=2, help='number of flo
 parser.add_argument('--wide-encoder', '-we', action='store_true',
                     help='use wider layer (more hidden units for FC, more channels for CIFAR)')
 
-args = parser.parse_args()
+args = parse_args(parser)
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
 

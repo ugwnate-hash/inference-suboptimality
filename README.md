@@ -6,7 +6,7 @@ Code regarding evaluation for paper
 ## Dependencies
 * `python3` (3.10–3.12 recommended)
 * `pytorch>=2.0` and `torchvision`
-* `numpy`, `scipy`, `tqdm`
+* `numpy`, `scipy`, `tqdm`, `pyyaml`
 * `visdom` (optional, only for `--visdom`)
 
 The code was originally written for `pytorch==0.2.0` and has been updated to run on current PyTorch,
@@ -28,6 +28,25 @@ runs every evaluation, and packages checkpoints and logs as the notebook's outpu
 For long runs use **Save Version → Save & Run All**.
 
 To run your own changes: commit, `git push`, then rerun the notebook's first cell (it pulls).
+To train without keeping the browser open, use **Save Version → Save & Run All (Commit)**:
+it runs in the background (up to 12 h) from the pushed branch, and saves `/kaggle/working`
+as the version's output.
+
+## Configuration
+[`config.yaml`](config.yaml) holds the experiment settings (dataset, model, training and
+evaluation sample counts). Every script reads it with `--config`, and flags given on the
+command line override the file:
+
+```bash
+python run.py --train --config config.yaml
+python run.py --train --config config.yaml --epochs 2 --display-epoch 1   # quick check
+python run.py --eval-ais --config config.yaml --eval-path <ckpt path>
+```
+
+Each script ignores keys it does not use, so one file serves all of them. The action flags
+(`--train`, `--eval-iwae`, `--eval-ais`) and `--eval-path` stay on the command line.
+Boolean settings set to `true` in the file cannot be switched off from the command line; edit
+the file (or use a copy) instead.
 
 ## Training
 MNIST is extracted from `datasets/mnist.pkl.tar.gz` automatically on first use; Fashion is read
@@ -47,6 +66,24 @@ downloaded automatically, if not already downloaded.
 * Local FFG: `python local_ffg.py --dataset <dataset> --eval-path <ckpt path>`
 * Local Flow: `python local_flow.py --dataset <dataset> --eval-path <ckpt path>`
 * BDMC: `python bdmc.py --eval-path <ckpt path> --n-ais-iwae <num samples> --n-ais-dist <num dist>`
+
+## Plotting the posteriors
+With a 2-D latent space the true posterior p(z|x) can be computed exactly on a grid, so it can
+be plotted against the approximate posteriors. Train with [`config_2d.yaml`](config_2d.yaml)
+(identical to `config.yaml` except `z_size: 2`; checkpoints go to `.../ffg_z2/`), then:
+
+```bash
+python run.py --train --config config_2d.yaml
+python plot_posteriors.py --config config_2d.yaml \
+    --checkpoints init checkpoints/mnist/warmup/ffg_z2/1_model.pth \
+                       checkpoints/mnist/warmup/ffg_z2/<last epoch>_model.pth
+```
+
+Each checkpoint is a row (`init` is the untrained model) and each test image a column. A panel
+shows the true posterior (the target, grey), the encoder's amortized q(z|x) (blue) and a Gaussian
+optimized for that image alone (orange, dashed), with log p(x) and the ELBO under each q.
+The script also prints the approximation gap (log p(x) - local ELBO) and the amortization gap
+(local ELBO - amortized ELBO) for each image. The figure is saved to `plots/posteriors_<dataset>.png`.
 
 ## Other Experiments
 For decoder size, flow affect amortization, test set gap and other experiments, refer to [this](https://github.com/chriscremer/Inference-Suboptimality).

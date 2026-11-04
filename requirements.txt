@@ -5,5 +5,7 @@ torchvision
 numpy
 scipy
 tqdm
+pyyaml
+matplotlib    # plot_posteriors.py
 # optional, only for `run.py --visdom`
 # visdom

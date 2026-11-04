@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from utils.ais import ais_trajectory
 from utils.simulate import simulate_data
 from utils.hparams import HParams
+from utils.config import parse_args
 from utils.math_ops import sigmoidial_schedule
 from utils.helper import get_model
 
@@ -42,7 +43,7 @@ parser.add_argument('--has-flow', '-hf', action='store_true',
 parser.add_argument('--hamiltonian-flow', '-hamil-f', action='store_true')
 parser.add_argument('--n-flows', '-nf', type=int, default=2, help='number of flows')
 
-args = parser.parse_args()
+args = parse_args(parser)
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
 

@@ -158,7 +158,7 @@ class CVAE(nn.Module):
 
         # for visualization
         mu, logvar, x_info = self.encode(x)
-        z, logpz, logqz = self.sample(mu, logvar)
+        z, logpz, logqz = self.sample(mu, logvar, x_info=x_info)
         logit = self.decode(z)
         x_hat = torch.sigmoid(logit)
 

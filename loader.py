@@ -87,7 +87,8 @@ class Larochelle_MNIST:
             else:
                 mnist = pickle.load(f, encoding='latin1')
             self.data = {
-                'train': np.concatenate((mnist[0][0], mnist[1][0])),
+                'train': mnist[0][0],
+                'valid': mnist[1][0],
                 'test': mnist[2][0],
                 'partial_train': mnist[0][0][:partial],
                 'partial_test': mnist[2][0][:partial],
@@ -230,7 +231,7 @@ def get_Larochelle_MNIST_loader(batch_size=100, partial=False, num=1000):
         test_loader = Larochelle_MNIST(part='partial_test')
     else:
         train_loader = Larochelle_MNIST(part='train', batch_size=batch_size)
-        test_loader = Larochelle_MNIST(part='test', batch_size=batch_size)
+        test_loader = Larochelle_MNIST(part='valid', batch_size=batch_size)  # really validation set
     
     return train_loader, test_loader
 

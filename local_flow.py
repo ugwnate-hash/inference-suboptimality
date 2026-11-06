@@ -153,7 +153,7 @@ def optimize_local_expressive(
             if args.cuda:
                 cur_layer.cuda()
             qz_weights.append(cur_layer)
-            all_params.append(cur_layer.weight)
+            all_params.extend(cur_layer.parameters())
 
         rv_weights = []  # r(v|x,z)
         for ins, outs in zip(rv_arch[:-1], rv_arch[1:]):
@@ -161,7 +161,7 @@ def optimize_local_expressive(
             if args.cuda:
                 cur_layer.cuda()
             rv_weights.append(cur_layer)
-            all_params.append(cur_layer.weight)
+            all_params.extend(cur_layer.parameters())
 
         params = []
         for i in range(n_flows):
@@ -178,9 +178,9 @@ def optimize_local_expressive(
 
             for sublist in layers:
                 for item in sublist:
-                    all_params.append(item.weight)
                     if args.cuda:
                         item.cuda()
+                    all_params.extend(item.parameters())
 
         return (mean_v, logvar_v), all_params, params, qz_weights, rv_weights
 

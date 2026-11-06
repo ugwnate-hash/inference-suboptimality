@@ -7,7 +7,7 @@
 dataset: mnist             # mnist | fashion | cifar
 
 model:
-  z_size: 2
+  z_size: 2                # 2 enables plot_posteriors.py; the paper uses 50
   wide_encoder: false      # more hidden units / channels in the encoder
   has_flow: false          # normalizing flow on top of the Gaussian encoder
   hamiltonian_flow: false  # Hamiltonian flow (run.py and bdmc.py only)
@@ -16,7 +16,7 @@ model:
 train:
   epochs: 500
   batch_size: 100
-  display_epoch: 20        # evaluate + save a checkpoint every N epochs
+  display_epoch: 20        # evaluate + save a checkpoint every N epochs (plus best_model.pth)
   lr_schedule: true        # IWAE learning-rate decay
   warmup: true             # anneal the KL term in over the first epochs
   early_stopping: true

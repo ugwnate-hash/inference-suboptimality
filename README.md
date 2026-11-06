@@ -57,6 +57,14 @@ For a quick check that everything works, train for a couple of epochs first:
 
 `python run.py --train --dataset <dataset> (--lr-schedule --warmup --early-stopping)`
 
+Besides the `<epoch>_model.pth` checkpoints, each evaluation during training keeps the model
+with the best validation ELBO as `best_model.pth`; use that one for evaluation. Validation data
+is held out from training for every dataset (for MNIST, 10,000 of the 60,000 images).
+
+To resume an interrupted run, add `--load-path <ckpt> --load-epoch <epoch>`. `--epochs` is the
+total, so training continues up to it, and warmup and the learning-rate schedule carry on from
+`<epoch>`. Adam's internal state and the early-stopping patience count start afresh.
+
 To train on CIFAR, set the argument for the dataset flag to `cifar`. The dataset should be
 downloaded automatically, if not already downloaded.
 
@@ -69,14 +77,14 @@ downloaded automatically, if not already downloaded.
 
 ## Plotting the posteriors
 With a 2-D latent space the true posterior p(z|x) can be computed exactly on a grid, so it can
-be plotted against the approximate posteriors. Train with [`config_2d.yaml`](config_2d.yaml)
-(identical to `config.yaml` except `z_size: 2`; checkpoints go to `.../ffg_z2/`), then:
+be plotted against the approximate posteriors. Train with `z_size: 2` in
+[`config.yaml`](config.yaml) (checkpoints go to `.../ffg_z2/`), then:
 
 ```bash
-python run.py --train --config config_2d.yaml
-python plot_posteriors.py --config config_2d.yaml \
+python run.py --train --config config.yaml
+python plot_posteriors.py --config config.yaml \
     --checkpoints init checkpoints/mnist/warmup/ffg_z2/1_model.pth \
-                       checkpoints/mnist/warmup/ffg_z2/<last epoch>_model.pth
+                       checkpoints/mnist/warmup/ffg_z2/best_model.pth
 ```
 
 Each checkpoint is a row (`init` is the untrained model) and each test image a column. A panel

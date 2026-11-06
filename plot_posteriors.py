@@ -1,6 +1,6 @@
 """Plot the true posterior p(z|x) against the approximate posteriors q(z|x).
 
-Only for models with a 2-D latent space (train with `config_2d.yaml`), where the
+Only for models with a 2-D latent space (`z_size: 2` in the config), where the
 true posterior can be computed exactly on a grid:
 
     p(z|x) = p(x|z) p(z) / p(x),   p(x) = integral of p(x|z) p(z) over the grid
@@ -13,9 +13,9 @@ and the numbers behind the paper's gaps: log p(x), and the ELBO under each q.
 Pass `init` as a checkpoint to include the untrained (randomly initialized) model.
 
 Example:
-    python plot_posteriors.py --config config_2d.yaml \
+    python plot_posteriors.py --config config.yaml \
         --checkpoints init checkpoints/mnist/warmup/ffg_z2/1_model.pth \
-                           checkpoints/mnist/warmup/ffg_z2/1000_model.pth
+                           checkpoints/mnist/warmup/ffg_z2/best_model.pth
 """
 
 from __future__ import absolute_import
@@ -73,7 +73,7 @@ args = parse_args(parser)
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 if args.z_size != 2:
     parser.error('the true posterior can only be plotted for a 2-D latent space '
-                 '(z_size: 2, e.g. --config config_2d.yaml); got z_size=%d' % args.z_size)
+                 '(z_size: 2 in the config); got z_size=%d' % args.z_size)
 
 LOG_2PI = math.log(2 * math.pi)
 CHUNK = 20000  # latent points per decoder call

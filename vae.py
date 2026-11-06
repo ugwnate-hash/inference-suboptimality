@@ -126,3 +126,24 @@ class VAE(nn.Module):
         logqz = torch.mean(logqz)
 
         return elbo, logpx, logpz, logqz
+
+    def reconstruct_img(self, x):
+        # for visualization
+        mu, logvar, x_info = self.encode(x)
+        z, logpz, logqz = self.sample(mu, logvar, x_info=x_info)
+        return torch.sigmoid(self.decode(z))
+
+    def _decoder_params(self):
+        for layer in (self.fc4, self.fc5, self.fc6):
+            for param in layer.parameters():
+                yield param
+
+    def freeze_decoder(self):
+        # freeze so that decoder is not optimized
+        for param in self._decoder_params():
+            param.requires_grad = False
+
+    def unfreeze_decoder(self):
+        # unfreeze so that decoder is optimized
+        for param in self._decoder_params():
+            param.requires_grad = True

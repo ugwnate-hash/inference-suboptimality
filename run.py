@@ -28,7 +28,8 @@ parser.add_argument('--train', '-t', action='store_true')
 parser.add_argument('--load-path', '-lp', type=str, default='NA',
                     help='path to load checkpoint to retrain')
 parser.add_argument('--load-epoch', '-le', type=int, default=0,
-                    help='epoch number to start recording when retraining')
+                    help='epoch of the --load-path checkpoint; training continues from '
+                         'there up to --epochs, with warmup and lr schedule resumed')
 parser.add_argument('--display-epoch', '-de', type=int, default=10,
                     help='print status every so many epochs (default: 10)')
 parser.add_argument('--eval-iwae', '-ei', action='store_true')
@@ -46,7 +47,7 @@ parser.add_argument('--no-cuda', '-nc', action='store_true', help='force not use
 parser.add_argument('--visdom', '-v', action='store_true', help='visualize samples')
 parser.add_argument('--port', '-p', type=int, default=8097, help='port for visdom')
 parser.add_argument('--save-visdom', default='test', help='visdom save path')
-parser.add_argument('--encoder-more', action='store_true', help='train the encoder more (5 vs 1)')
+parser.add_argument('--encoder-more', action='store_true', help='train the encoder more (10 extra updates per step)')
 parser.add_argument('--early-stopping', '-es', action='store_true', help='apply early stopping')
 parser.add_argument('--epochs', '-e', type=int, default=3280,
                     help='total num of epochs for training (default: 3280)')
@@ -116,9 +117,11 @@ def train(
 ):
     print('Training')
 
+    start_epoch = 0  # last epoch already trained, when resuming
     if args.load_path != 'NA':
         f = args.load_path
         model.load_state_dict(torch.load(f)['state_dict'])
+        start_epoch = args.load_epoch
 
     # default warmup schedule
     if warmup_thres is None:
@@ -142,7 +145,13 @@ def train(
         optimizer = optim.Adam(model.parameters(), lr=1e-4, eps=1e-4)
 
     num_worse = 0  # compare against `patience` for early-stopping
-    prev_valid_err = None
+    best_path = '%sbest_%s' % (save_path, args.save_name)
+    best_valid = None
+    if start_epoch and os.path.exists(best_path):  # don't lose the best model so far
+        best_valid = torch.load(best_path, map_location='cpu').get('valid_elbo')
+
+    def save_checkpoint(path, **extra):
+        torch.save(dict(epoch=epoch, state_dict=model.state_dict(), **extra), path)
 
     for epoch in tqdm(range(1, epochs+1)):
         warmup_const = min(1., epoch / warmup_thres) if warmup else 1.
@@ -156,6 +165,9 @@ def train(
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = current_lr
             epoch_elapsed += 1
+
+        if epoch <= start_epoch:  # resuming: only replay the schedules above
+            continue
 
         model.train()  # crucial for BN to work properly
         for _, (batch, _) in enumerate(train_loader):
@@ -216,25 +228,19 @@ def train(
             )
             time_ = time.time()
 
-            if early_stopping:
-                curr_valid_err = np.mean(test_stats)
-
-                if prev_valid_err is None:  # don't have history yet
-                    prev_valid_err = curr_valid_err
-                elif curr_valid_err >= prev_valid_err:  # performance improved
-                    prev_valid_err = curr_valid_err
-                    num_worse = 0
-                else:
-                    num_worse += 1
-
-                if num_worse >= patience:
-                    break
+            curr_valid = float(np.mean(test_stats))
+            if best_valid is None or curr_valid >= best_valid:  # performance improved
+                best_valid, num_worse = curr_valid, 0
+                if save:
+                    save_checkpoint(best_path, valid_elbo=best_valid)
+            else:
+                num_worse += 1
 
         if save and epoch in checkpoints:
-            torch.save({
-                'epoch': epochs + args.load_epoch,
-                'state_dict': model.state_dict(),
-            }, '%s%d_%s' % (save_path, epoch + args.load_epoch, args.save_name))
+            save_checkpoint('%s%d_%s' % (save_path, epoch, args.save_name))
+
+        if early_stopping and num_worse >= patience:
+            break
 
 
 def test_iwae(
@@ -299,15 +305,18 @@ def run():
         vis = visdom.Visdom(env=args.save_visdom, port=args.port)
         model.load_state_dict(torch.load(args.eval_path)['state_dict'])
 
+        def as_images(x):  # the fully connected VAE works on flattened images
+            return x.view(-1, 1, 28, 28) if x.dim() == 2 else x
+
         # plot original images
         batch, _ = next(iter(train_loader))
-        images = list(batch.numpy())
+        images = list(as_images(batch).numpy())
         win_samples = vis.images(images, 10, 2, opts={'caption': 'original images'}, win=None)
 
         # plot reconstructions
         batch = Variable(batch.type(model.dtype))
         reconstruction = model.reconstruct_img(batch)
-        images = list(reconstruction.data.cpu().numpy())
+        images = list(as_images(reconstruction).data.cpu().numpy())
         win_samples = vis.images(images, 10, 2, opts={'caption': 'reconstruction'}, win=None)
 
     if args.eval_iwae:
